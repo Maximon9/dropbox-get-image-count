@@ -1,1 +1,3 @@
-/.venv
+!/requirements.py
+!/build.py
+!/src
