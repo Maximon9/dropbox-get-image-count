@@ -28,4 +28,4 @@ window.setLayout(layout)
 window.show()
 
 # Run the application event loop
-app.exec_()
+app.exec()

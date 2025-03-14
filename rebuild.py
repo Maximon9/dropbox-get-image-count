@@ -76,8 +76,8 @@ main_folder = fetch_parent_folder("dropbox-get-image-count", __file__)
 venv_path = join(main_folder, ".venv")
 remove_files_and_directories(
     venv_path,
-    join(main_folder, "build", "main"),
-    join(main_folder, "dist", "main"),
+    join(main_folder, "build", "GetAllCountOfAllDropboxFiles"),
+    join(main_folder, "dist", "GetAllCountOfAllDropboxFiles"),
 )
 
 
@@ -130,12 +130,18 @@ if not exists(py_installer):
     if not exists(py_installer):
         raise Exception("venv doesn't seem to have a pyinstaller path")
 
-main_path = join(main_folder, "src/main.spec")
+get_all_count_of_all_dropbox_files_path = join(
+    main_folder, "src/GetAllCountOfAllDropboxFiles.spec"
+)
 
-if not exists(main_path):
-    main_path = join(main_folder, "src/main.pyw")
-    if not exists(main_path):
-        main_path = join(main_folder, "src/main.py")
+if not exists(get_all_count_of_all_dropbox_files_path):
+    get_all_count_of_all_dropbox_files_path = join(
+        main_folder, "src/GetAllCountOfAllDropboxFiles.pyw"
+    )
+    if not exists(get_all_count_of_all_dropbox_files_path):
+        get_all_count_of_all_dropbox_files_path = join(
+            main_folder, "src/GetAllCountOfAllDropboxFiles.py"
+        )
 
 cls()
 percent = 75
@@ -143,12 +149,13 @@ print(f"{get_bar(percent)} {percent}% Building executable", end="\r")
 process = run(
     [
         py_installer,
-        # "--onefile",
-        # "--distpath",
-        # "./build/dist",
-        # "--workpath",
-        # "./build/build",
-        main_path,
+        "--onefile",
+        "--distpath",
+        "./dist",
+        "--workpath",
+        "./build",
+        "--icon=./assets/icons/favicon.ico",
+        get_all_count_of_all_dropbox_files_path,
         "-y",
     ],
     capture_output=True,
