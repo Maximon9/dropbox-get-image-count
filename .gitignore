@@ -1,3 +1,6 @@
+# Exclude everything
+/*
+
 !/requirements.py
 !/build.py
 !/src

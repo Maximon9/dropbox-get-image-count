@@ -7,10 +7,6 @@ import platform
 from subprocess import run
 from time import sleep
 from math import floor
-import shutil
-
-# python_paths = shutil.which("python")
-# print(f"Python found at: {python_path}")
 
 
 def cls():
@@ -75,12 +71,12 @@ def fetch_parent_folder(name: str, path: str) -> str:
     return ""
 
 
-main_folder = fetch_parent_folder("MAudioBugFix", __file__)
+main_folder = fetch_parent_folder("dropbox-get-image-count", __file__)
 
 venv_path = join(main_folder, ".venv")
 remove_files_and_directories(
-    join(main_folder, "build", "maudio_bug_fix"),
-    join(main_folder, "dist", "maudio_bug_fix"),
+    join(main_folder, "build", "main"),
+    join(main_folder, "dist", "main"),
     venv_path,
 )
 
