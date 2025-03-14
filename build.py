@@ -75,9 +75,9 @@ main_folder = fetch_parent_folder("dropbox-get-image-count", __file__)
 
 venv_path = join(main_folder, ".venv")
 remove_files_and_directories(
+    venv_path,
     join(main_folder, "build", "main"),
     join(main_folder, "dist", "main"),
-    venv_path,
 )
 
 
