@@ -75,6 +75,7 @@ main_folder = fetch_parent_folder("dropbox-get-image-count", __file__)
 
 venv_path = join(main_folder, ".venv")
 remove_files_and_directories(
+    venv_path,
     join(main_folder, "build", "main"),
     join(main_folder, "dist", "main"),
 )
@@ -84,12 +85,25 @@ requirements_path = join(main_folder, "requirements.txt")
 
 py_var = "python" if platform.system() == "Windows" else "python3"
 
+createvenv_path = join(venv_path, "createvenv.txt")
+
 cls()
 percent = 25
 print(
     f"{get_bar(percent)} {percent}% Trying to create virtual environment",
     end="\r",
 )
+
+if not exists(createvenv_path):
+    process = run(
+        [py_var, "-m", "venv", venv_path],
+        capture_output=True,
+    )
+    f = open(createvenv_path, "a")
+    f.write(
+        "Delete this file only if you want to recreate the venv! Do not include this file when you package/publish the extension."
+    )
+    f.close()
 
 py_var = join(venv_path, "Scripts/python.exe")
 
