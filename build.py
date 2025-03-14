@@ -85,11 +85,6 @@ requirements_path = join(main_folder, "requirements.txt")
 py_var = "python" if platform.system() == "Windows" else "python3"
 
 cls()
-percent = 25
-print(
-    f"{get_bar(percent)} {percent}% Trying to create virtual environment",
-    end="\r",
-)
 
 py_var = join(venv_path, "Scripts/python.exe")
 
