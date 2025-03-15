@@ -96,7 +96,6 @@ def get_image_urls(main_url: str):
 
             # Find any background images (CSS style)
             # Search for style attributes in elements that may have background images
-            background_images = []
             for tag in soup.find_all(style=True):
                 style = tag["style"]
                 # Look for background-image CSS rule
