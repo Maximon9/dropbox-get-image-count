@@ -24,33 +24,34 @@ def download_image(url, folder, index):
         response.raise_for_status()  # Raise error for bad responses
 
         # Extract file extension or default to .jpg
-        ext = os.path.splitext(url)[1].lower()
-        if ext not in {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}:
+        file_name = os.path.basename(url)
+        split = os.path.splitext(file_name)
+        ext = split[1].lower()
+        if ext not in IMAGE_EXTENSIONS:
             ext = ".jpg"
+            file_name = split[0] + ext
 
         # Save image with a unique name
-        filename = f"{index}{ext}"
-        filepath = os.path.join(folder, filename)
+        filepath = os.path.join(folder, file_name)
 
         with open(filepath, "wb") as file:
             for chunk in response.iter_content(1024):
                 file.write(chunk)
 
-        print(f"✅ Downloaded: {filename}")
     except requests.exceptions.RequestException as e:
         print(f"❌ Failed to download {url}: {e}")
 
 
-def bulk_download_images(
-    image_urls: list[str], folder="downloaded_images", num_threads=5
-):
-    """Download images using multiple threads for speed."""
-    if not os.path.exists(folder):
-        os.makedirs(folder)
+# def bulk_download_images(
+#     image_urls: list[str], folder="downloaded_images", num_threads=5
+# ):
+#     """Download images using multiple threads for speed."""
+#     if not os.path.exists(folder):
+#         os.makedirs(folder)
 
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        for index, url in enumerate(image_urls):
-            executor.submit(download_image, url, folder, index)
+#     with ThreadPoolExecutor(max_workers=num_threads) as executor:
+#         for index, url in enumerate(image_urls):
+#             executor.submit(download_image, url, folder, index)
 
 
 def is_exception(url: str) -> bool:
@@ -122,6 +123,7 @@ def get_image_urls(main_url: str) -> set[str]:
                     if not vid_src in media_urls:
                         print(vid_src)
                         media_urls.add(vid_src)
+                        download_image(vid_src, "./web_images")
 
             img_tags = soup.find_all("img")
             for img_tag in img_tags:
@@ -130,6 +132,7 @@ def get_image_urls(main_url: str) -> set[str]:
                     if not img_src in media_urls:
                         print(img_src)
                         media_urls.add(img_src)
+                        download_image(img_src, "./web_images")
 
             # Find any background images (CSS style)
             # Search for style attributes in elements that may have background images
@@ -144,6 +147,7 @@ def get_image_urls(main_url: str) -> set[str]:
                         if not background_url in media_urls:
                             print(background_url)
                             media_urls.add(background_url)
+                            download_image(background_url, "./web_images")
 
             # Pretty-print the remaining HTML content without script tags
 
@@ -193,6 +197,6 @@ def get_image_urls(main_url: str) -> set[str]:
 
 medias = get_image_urls(base_url)
 
-bulk_download_images(image_urls=medias, folder="./web_images", num_threads=10)
+# bulk_download_images(image_urls=medias, folder="./web_images", num_threads=10)
 
 print(len(medias))
