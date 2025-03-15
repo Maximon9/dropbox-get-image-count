@@ -131,16 +131,16 @@ if not exists(py_installer):
         raise Exception("venv doesn't seem to have a pyinstaller path")
 
 get_all_count_of_all_dropbox_files_path = join(
-    main_folder, "src/GetAllCountOfAllDropboxFiles.spec"
+    main_folder, "GetAllCountOfAllDropboxFiles.spec"
 )
 
 if not exists(get_all_count_of_all_dropbox_files_path):
     get_all_count_of_all_dropbox_files_path = join(
-        main_folder, "src/GetAllCountOfAllDropboxFiles.pyw"
+        main_folder, "GetAllCountOfAllDropboxFiles.pyw"
     )
     if not exists(get_all_count_of_all_dropbox_files_path):
         get_all_count_of_all_dropbox_files_path = join(
-            main_folder, "src/GetAllCountOfAllDropboxFiles.py"
+            main_folder, "GetAllCountOfAllDropboxFiles.py"
         )
 
 cls()

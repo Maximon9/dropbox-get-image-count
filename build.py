@@ -75,8 +75,8 @@ main_folder = fetch_parent_folder("dropbox-get-image-count", __file__)
 
 venv_path = join(main_folder, ".venv")
 remove_files_and_directories(
-    join(main_folder, "build", "main"),
-    join(main_folder, "dist", "main.exe"),
+    join(main_folder, "build", "GetAllCountOfAllDropboxFiles"),
+    join(main_folder, "dist", "GetAllCountOfAllDropboxFiles.exe"),
 )
 
 
@@ -112,16 +112,16 @@ if not exists(py_installer):
         raise Exception("venv doesn't seem to have a pyinstaller path")
 
 get_all_count_of_all_dropbox_files_path = join(
-    main_folder, "src/GetAllCountOfAllDropboxFiles.spec"
+    main_folder, "GetAllCountOfAllDropboxFiles.spec"
 )
 
 if not exists(get_all_count_of_all_dropbox_files_path):
     get_all_count_of_all_dropbox_files_path = join(
-        main_folder, "src/GetAllCountOfAllDropboxFiles.pyw"
+        main_folder, "GetAllCountOfAllDropboxFiles.pyw"
     )
     if not exists(get_all_count_of_all_dropbox_files_path):
         get_all_count_of_all_dropbox_files_path = join(
-            main_folder, "src/GetAllCountOfAllDropboxFiles.py"
+            main_folder, "GetAllCountOfAllDropboxFiles.py"
         )
 
 cls()

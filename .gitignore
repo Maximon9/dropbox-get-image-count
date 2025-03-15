@@ -6,3 +6,5 @@
 !/rebuild.py
 !/src
 !/assets
+!/.vscode
+!/packages

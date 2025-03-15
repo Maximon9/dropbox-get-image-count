@@ -37,16 +37,3 @@ def count_images_in_dropbox(dbx, path=""):
         print(f"Error: {e}")
 
     return image_count
-
-
-def main():
-    # Initialize Dropbox client
-    dbx = dropbox.Dropbox(ACCESS_TOKEN)
-
-    # Count images in Dropbox
-    total_images = count_images_in_dropbox(dbx)
-    print(f"Total images in Dropbox: {total_images}")
-
-
-if __name__ == "__main__":
-    main()
