@@ -1,4 +1,10 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout
+from PyQt6.QtWidgets import (
+    QApplication,
+    QWidget,
+    QPushButton,
+    QVBoxLayout,
+)
+from PyQt6.QtGui import QScreen
 
 
 def on_button_click():
@@ -10,8 +16,19 @@ app = QApplication([])
 
 # Create the main window
 window = QWidget()
-window.setWindowTitle("PyQt Example")
-window.setGeometry(100, 100, 300, 200)
+window.setWindowTitle("Getting Count of DropBox Files")
+
+# Get the screen dimensions
+screen = app.primaryScreen()  # Get the primary screen (main monitor)
+screen_geometry = (
+    screen.availableGeometry()
+)  # Get the screen's geometry (x, y, width, height)
+screen_width = screen_geometry.width()
+screen_height = screen_geometry.height()
+
+x = (screen_width - window.width()) // 2
+y = (screen_height - window.height()) // 2
+window.setGeometry(x, y, 1280, 720)
 
 # Create a button and connect it to a function
 button = QPushButton("Click Me")
