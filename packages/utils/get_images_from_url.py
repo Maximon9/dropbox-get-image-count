@@ -11,7 +11,13 @@ import os
 
 base_url = "https://pcclegacy.smugmug.com/"
 
+EXCEPTIONS = {"https://pcclegacy.smugmug.com/Website-Images/Contact-us/Contact"}
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".webp"}
+
+
+def is_exception(url: str) -> bool:
+    return url.strip() in EXCEPTIONS
 
 
 def is_reachable_url(url: str) -> bool:
@@ -116,6 +122,7 @@ def get_image_urls(main_url: str):
                     and not url_is_image(a_link.strip())
                     and is_reachable_url(a_link.strip())
                     and url_is_same_domain(main_url, a_link.strip())
+                    and not is_exception(a_link)
                 ):
                     print(
                         "\n\n\n",
