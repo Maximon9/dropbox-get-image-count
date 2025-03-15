@@ -6,13 +6,24 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup  # Import BeautifulSoup
-
-# import requests
+import requests
 import os
 
 base_url = "https://pcclegacy.smugmug.com/"
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".webp"}
+
+
+def is_reachable_url(url: str) -> bool:
+    try:
+        response = requests.get(url, timeout=10)  # 10 seconds timeout
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        return False
+
+
+def url_is_same_domain(domain: str, url: str):
+    return domain in url
 
 
 def url_is_image(url: str):
@@ -21,7 +32,10 @@ def url_is_image(url: str):
 
 
 # Set up Selenium to use Chrome
-def get_image_urls(url: str):
+def get_image_urls(main_url: str):
+    visited_urls = set()
+    media_urls = set()
+
     chrome_service = ChromeService(executable_path=ChromeDriverManager().install())
     chrome_options = Options()
     chrome_options.add_argument(
@@ -30,19 +44,25 @@ def get_image_urls(url: str):
     chrome_options.add_argument("--disable-gpu")  # Disable GPU for headless mode
 
     # Use WebDriver Manager to get the correct ChromeDriver
+    # driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
 
-    def get_image_urls_rec(url: str):
-        driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+    def get_image_urls_rec(rec_url: str):
+        if rec_url in visited_urls:
+            return
+
+        visited_urls.add(rec_url.strip())
+
         # Fetch the website
-        driver.get(url)
+        driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+        driver.get(rec_url)
 
         # Wait for the page to load completely
         try:
-            # WebDriverWait(driver, 0).until(
-            #     EC.presence_of_element_located(
-            #         (By.CSS_SELECTOR, "body")
-            #     )  # Modify this selector as needed
-            # )
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "body")
+                )  # Modify this selector as needed
+            )
 
             # Once the page is fully loaded, get the full HTML content
             html_content = driver.page_source
@@ -52,8 +72,21 @@ def get_image_urls(url: str):
 
             # Find all <img> tags and extract the 'src' attributes
 
+            vid_tags = soup.find_all("video")
+            for vid_tag in vid_tags:
+                vid_src = vid_tag.get("src").strip()
+                if vid_src != None:
+                    if not vid_src in media_urls:
+                        print(vid_src)
+                        media_urls.add(vid_src)
+
             img_tags = soup.find_all("img")
-            img_urls = [img.get("src") for img in img_tags if img.get("src")]
+            for img_tag in img_tags:
+                img_src = img_tag.get("src").strip()
+                if img_src != None and url_is_image(img_src):
+                    if not img_src in media_urls:
+                        print(img_src)
+                        media_urls.add(img_src)
 
             # Find any background images (CSS style)
             # Search for style attributes in elements that may have background images
@@ -62,40 +95,57 @@ def get_image_urls(url: str):
                 style = tag["style"]
                 # Look for background-image CSS rule
                 if "background-image" in style:
-                    url = style.split('background-image: url("')[1].split('")')[0]
-                    background_images.append(url)
+                    background_url = (
+                        style.split('background-image: url("')[1].split('")')[0].strip()
+                    )
+                    if url_is_image(background_url):
+                        if not background_url in media_urls:
+                            print(background_url)
+                            media_urls.add(background_url)
 
             # Pretty-print the remaining HTML content without script tags
 
             # Combine image URLs from <img> tags and CSS background images
-            all_image_urls = img_urls + background_images
-            all_image_urls = list(set(all_image_urls))
-
-            for url in all_image_urls:
-                print(url)
 
             a_tags = soup.find_all("a")
             for a_tag in a_tags:
                 a_link = a_tag.get("href")
-                if not (a_link.strip() in url.strip()) and not (
-                    url.strip() in a_link.strip() and not url_is_image(a_link)
+                if (
+                    a_link != None
+                    and not a_link.strip() in visited_urls
+                    and not url_is_image(a_link.strip())
+                    and is_reachable_url(a_link.strip())
+                    and url_is_same_domain(main_url, a_link.strip())
                 ):
-                    print("\n\n\n\n\n\n", a_link, ", ", url, "\n\n\n\n\n\n")
-                    all_image_urls + get_image_urls_rec(a_link)
+                    print(
+                        "\n\n\n",
+                        rec_url,
+                        ", ",
+                        a_link,
+                        ", ",
+                        not a_link.strip() in visited_urls,
+                        ", ",
+                        not url_is_image(a_link.strip()),
+                        ", ",
+                        is_reachable_url(a_link.strip()),
+                        "\n\n\n",
+                    )
+                    get_image_urls_rec(a_link)
             # Remove duplicates (optional)
 
             # Print out all image URLs found
-            return all_image_urls
         finally:
             # Close the WebDriver
             driver.quit()
 
-    return get_image_urls_rec(url)
+    return get_image_urls_rec(main_url)
 
 
-url_is_image(
-    "https://photos.smugmug.com/Website-Images/HeadShots/HeadShots/i-SVmsNsG/0/NgKHGLVTTPmJzCLHM7gqZGR6TCf3W9q89WpCzrKs3/L/Alfred_Grace-L.jpg"
-)
+# print(
+#     url_is_image(
+#         "https://photos.smugmug.com/PCC-60th-Anniversary/Alumni-Gallery/Gallery-Example-1/i-Xvd6qBD/0/MMfVLZLdwVsCGb95Kpjt3dD6S5JsxpGwjkpscWFPJ/X3/Fiji_sm-X3.jpg"
+#     )
+# )
 
 medias = get_image_urls(base_url)
 print(len(medias))
