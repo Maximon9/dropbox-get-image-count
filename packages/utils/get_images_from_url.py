@@ -1,47 +1,44 @@
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 from urllib.parse import urljoin
 
 
-def get_images_from_page(url):
-    """Fetch images from a single page."""
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+def get_media_urls_with_playwright(url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(url)
 
-    # Find all images on the page
-    image_elements = soup.find_all("img")
-    image_urls = [
-        urljoin(url, img["src"]) for img in image_elements if "src" in img.attrs
-    ]
+        media_urls = []
 
-    return image_urls
+        # Get all image URLs
+        images = page.query_selector_all("img")
+        for img in images:
+            src = img.get_attribute("src")
+            if src:
+                media_urls.append(urljoin(url, src))
 
+        # Get all video URLs
+        videos = page.query_selector_all("video")
+        for video in videos:
+            src = video.get_attribute("src")
+            if src:
+                media_urls.append(urljoin(url, src))
 
-def get_next_page_url(soup, base_url):
-    """Find the 'Next' page URL from the pagination."""
-    next_button = soup.find("a", {"rel": "next"})  # Example selector
-    if next_button:
-        return urljoin(base_url, next_button["href"])
-    return None
+            # Get source tags inside video tags
+            sources = video.query_selector_all("source")
+            for source in sources:
+                srcset = source.get_attribute("src")
+                if srcset:
+                    media_urls.append(urljoin(url, srcset))
 
+        browser.close()
 
-def scrape_images(url):
-    """Scrape images across multiple pages."""
-    image_urls = []
-    while url:
-        print(f"Scraping page: {url}")
-        page_images = get_images_from_page(url)
-        image_urls.extend(page_images)
-
-        # Fetch next page URL
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        url = get_next_page_url(soup, url)
-
-    return image_urls
+    return media_urls
 
 
-# Example usage
-base_url = "https://example.com"
-all_images = scrape_images(base_url)
-print(f"Found {len(all_images)} images.")
+# Example usage:
+base_url = "https://pcclegacy.smugmug.com/"
+media_urls = get_media_urls_with_playwright(base_url)
+for url in media_urls:
+    print(url)
+# base_url = "https://pcclegacy.smugmug.com/"
