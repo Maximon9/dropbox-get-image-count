@@ -26,9 +26,11 @@ screen_geometry = (
 screen_width = screen_geometry.width()
 screen_height = screen_geometry.height()
 
-x = (screen_width - window.width()) // 2
-y = (screen_height - window.height()) // 2
-window.setGeometry(x, y, 1280, 720)
+width = 1280
+height = 720
+x = (screen_width - width) // 2
+y = (screen_height - height) // 2
+window.setGeometry(x, y, width, height)
 
 # Create a button and connect it to a function
 button = QPushButton("Click Me")
