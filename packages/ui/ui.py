@@ -12,12 +12,56 @@ from typing_extensions import (
     Optional,
     TypedDict,
     NotRequired,
-    List,
+    # list,
 )
 
 from PyQt6.QtGui import QResizeEvent
 
 from enum import Enum
+
+from PyQt6.QtCore import QThread, pyqtSignal, QElapsedTimer
+import time
+
+
+class Worker(QThread):
+    update = pyqtSignal(int)
+
+    def __init__(self, target_fps=60):
+        super().__init__()
+        self.target_fps = target_fps
+        self.running = True
+
+    def set_fps(self, new_fps):
+        """Change the target FPS dynamically."""
+        self.target_fps = new_fps
+
+    def run(self):
+        fps_counter = 0
+        timer = QElapsedTimer()
+        timer.start()
+
+        frame_time = 1.0 / self.target_fps  # Target frame time
+
+        while self.running:
+            start_time = time.time()
+            fps_counter += 1
+
+            # Send FPS count every second
+            if timer.elapsed() >= 1000:
+                self.update.emit(fps_counter)
+                fps_counter = 0
+                timer.restart()
+
+            # Sleep to maintain target FPS
+            elapsed_time = time.time() - start_time
+            sleep_time = max(0, frame_time - elapsed_time)
+            time.sleep(sleep_time)
+
+    def stop(self):
+        """Stops the loop safely."""
+        self.running = False
+        self.quit()
+        self.wait()
 
 
 class MeasuringUnit(Enum):
@@ -27,42 +71,50 @@ class MeasuringUnit(Enum):
 
 class LayoutInfo(TypedDict):
     layout: NotRequired[QVBoxLayout]
+    stretch_index: NotRequired[int]
+    stretch: NotRequired[int]
 
 
-class UIInfo(TypedDict):
-    ui: Callable[[QWidget], QWidget]
-    unit: MeasuringUnit = MeasuringUnit.PIXEL
+class GUIInfo(TypedDict):
+    gui: Callable[[QWidget], QWidget]
+    unit: MeasuringUnit
     size: QSize = QSize(100, 100)
-    stretch: NotRequired[int] = None
-    alignment: NotRequired[Qt.AlignmentFlag] = None
+    stretch: NotRequired[int]
+    alignment: NotRequired[Qt.AlignmentFlag]
 
 
-UIInfos = NewType("UIInfos", List[UIInfo])
+GUIInfos = NewType("GUIInfos", list[GUIInfo])
 
 
 class WindowInfo(TypedDict):
     title: NotRequired[str]
-    ui: NotRequired[UIInfos]
+    guis: NotRequired[GUIInfos]
     width: NotRequired[int]
     height: NotRequired[int]
+    resize: NotRequired[Callable[[QResizeEvent]]]
+    process: NotRequired[Callable]
 
 
 class CustomWindow(QWidget):
     app: QApplication
-    uis: UIInfos
+    guis: GUIInfos
     layout_info: LayoutInfo
+    layout_info: LayoutInfo
+    resize: Callable[[QResizeEvent]]
 
     def __init__(
         self,
+        app: QApplication,
         title: str,
-        ui: UIInfos = [],
+        guis: GUIInfos = [],
         width: int = 1280,
         height: int = 720,
         layout: LayoutInfo = {},
         parent: Optional[QWidget] = None,
         flags: Qt.WindowType = Qt.WindowType.Window,
     ):
-        super(parent, flags)
+        super().__init__(parent, flags)
+        self.app = app
 
         screen = self.app.primaryScreen()  # Get the primary screen (main monitor)
         screen_geometry = (
@@ -79,83 +131,101 @@ class CustomWindow(QWidget):
 
         self.setWindowTitle(title)
 
-        self.init_winidow(layout, ui)
+        self.init_winidow(layout, guis)
 
     def resizeEvent(self, event: QResizeEvent):
-        new_size = event.size()  # Get the new size of the window
-        print(f"Window resized to: {new_size.width()}x{new_size.height()}")
+        self.resize(event)
 
-    def init_winidow(self, layout_info: LayoutInfo = {}, ui: UIInfos = []):
+    def init_winidow(self, layout_info: LayoutInfo = {}, guis: GUIInfos = []):
         self.layout_info = layout_info
 
-        if self.layout_info["layout"] == None:
+        if not "layout" in self.layout_info:
             self.layout_info["layout"] = QVBoxLayout()
 
-        self.uis = ui
+        self.guis = guis
 
-        for ui_info in self.uis:
-            if ui_info.stretch == None and ui_info.alignment == None:
-                self.layout_info["layout"].addWidget(a0=ui_info["ui"]())
-            elif ui_info.stretch != None and ui_info.alignment == None:
+        for gui_info in self.guis:
+            gui = gui_info["gui"](self)
+            if "size" in gui_info:
+                gui.setFixedSize(gui_info["size"])
+            if not "stretch" in gui_info == None and not "alignment" in gui_info:
+                self.layout_info["layout"].addWidget(gui)
+            elif "stretch" in gui_info == None and not "alignment" in gui_info:
+                self.layout_info["layout"].addWidget(gui, stretch=gui_info["stretch"])
+            elif not "stretch" in gui_info == None and "alignment" in gui_info:
                 self.layout_info["layout"].addWidget(
-                    a0=ui_info["ui"](), stretch=ui_info["stretch"]
+                    gui, alignment=gui_info["alignment"]
                 )
-            elif ui_info.stretch == None and ui_info.alignment != None:
+            elif "stretch" in gui_info == None and "alignment" in gui_info:
                 self.layout_info["layout"].addWidget(
-                    a0=ui_info["ui"](), alignment=ui_info["alignment"]
-                )
-            elif ui_info.stretch != None and ui_info.alignment != None:
-                self.layout_info["layout"].addWidget(
-                    a0=ui_info["ui"](),
-                    stretch=ui_info["stretch"],
-                    alignment=ui_info["alignment"],
+                    gui,
+                    stretch=gui_info["stretch"],
+                    alignment=gui_info["alignment"],
                 )
         # Show the window
+        if "stretch_index" in self.layout_info and "stretch" in self.layout_info:
+            self.layout_info["layout"].setStretch(
+                self[layout_info["stretch_index"], layout_info["stretch"]]
+            )
         # self.layout_info["layout"].addStretch
         self.setLayout(layout_info["layout"])
         self.show()
 
 
-Windows = NewType("Windows", List[CustomWindow])
+Windows = NewType("Windows", list[CustomWindow])
 
 
 class CustomApp(QApplication):
     windows: Windows
+    process: Callable
+    worker: Worker
 
-    def __init__(self, windows_infos: List[WindowInfo], argv: list[str] = []):
+    def __init__(self, worker, windows_infos: list[WindowInfo], argv: list[str] = []):
+        super().__init__(argv)
+
+        self.worker = Worker(target_fps=60)
+        self.worker.updated.connect(self.update_counter)
+        self.worker.start()
+
+        self.windows = []
         for window_info in windows_infos:
-            title = None
+            title = ""
             if "title" in window_info:
                 title = window_info["title"]
 
-            ui = None
-            if "width" in window_info:
-                ui = window_info["ui"]
+            guis = []
+            if "guis" in window_info:
+                guis = window_info["guis"]
 
-            width = None
+            width = 1280
             if "width" in window_info:
                 width = window_info["width"]
 
-            height = None
+            height = 720
             if "height" in window_info:
                 height = window_info["height"]
 
             self.windows.append(
-                CustomWindow(title=title, ui=ui, width=width, height=height)
+                CustomWindow(self, title=title, guis=guis, width=width, height=height)
             )
-        super(argv)
 
     def add_window(self, window_info: WindowInfo):
-        title = window_info["title"]
-        if title == None:
-            title = ""
+        title = ""
+        if "title" in window_info:
+            title = window_info["title"]
 
-        ui = window_info["ui"]
+        guis = []
+        if "guis" in window_info:
+            guis = window_info["guis"]
 
-        width = window_info["width"]
+        width = 1280
+        if "width" in window_info:
+            width = window_info["width"]
 
-        height = window_info["height"]
+        height = 720
+        if "height" in window_info:
+            height = window_info["height"]
 
         self.windows.append(
-            CustomWindow(title=title, ui=ui, width=width, height=height)
+            CustomWindow(title=title, guis=guis, width=width, height=height)
         )
