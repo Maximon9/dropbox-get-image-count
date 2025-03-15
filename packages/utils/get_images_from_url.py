@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup  # Import BeautifulSoup
 import requests
 import os
 from concurrent.futures import ThreadPoolExecutor
+from glob import glob
 
 base_url = "https://pcclegacy.smugmug.com/"
 
@@ -49,9 +50,19 @@ def download_image(url: str, folder: str):
 #     if not os.path.exists(folder):
 #         os.makedirs(folder)
 
+
 #     with ThreadPoolExecutor(max_workers=num_threads) as executor:
 #         for index, url in enumerate(image_urls):
 #             executor.submit(download_image, url, folder, index)
+def already_downloaded(folder: str, url: str):
+    files = glob.glob(f"{folder}/*")
+    file_name = os.path.basename(url)
+
+    for file in files:
+        if file_name in file:
+            return True
+
+    return False
 
 
 def is_exception(url: str) -> bool:
@@ -76,7 +87,7 @@ def url_is_image(url: str):
 
 
 # Set up Selenium to use Chrome
-def get_image_urls(main_url: str) -> set[str]:
+def get_image_urls(main_url: str, download_path: str) -> set[str]:
     visited_urls: set[str] = set()
     media_urls: set[str] = set()
 
@@ -120,19 +131,23 @@ def get_image_urls(main_url: str) -> set[str]:
             for vid_tag in vid_tags:
                 vid_src = vid_tag.get("src").strip()
                 if vid_src != None:
-                    if not vid_src in media_urls:
+                    if not vid_src in media_urls and not already_downloaded(
+                        download_path, vid_src
+                    ):
                         print(vid_src)
                         media_urls.add(vid_src)
-                        download_image(vid_src, "./web_images")
+                        download_image(vid_src, download_path)
 
             img_tags = soup.find_all("img")
             for img_tag in img_tags:
                 img_src = img_tag.get("src").strip()
                 if img_src != None and url_is_image(img_src):
-                    if not img_src in media_urls:
+                    if not img_src in media_urls and not already_downloaded(
+                        download_path, img_src
+                    ):
                         print(img_src)
                         media_urls.add(img_src)
-                        download_image(img_src, "./web_images")
+                        download_image(img_src, download_path)
 
             # Find any background images (CSS style)
             # Search for style attributes in elements that may have background images
@@ -144,10 +159,12 @@ def get_image_urls(main_url: str) -> set[str]:
                         style.split('background-image: url("')[1].split('")')[0].strip()
                     )
                     if url_is_image(background_url):
-                        if not background_url in media_urls:
+                        if not background_url in media_urls and not already_downloaded(
+                            download_path, background_url
+                        ):
                             print(background_url)
                             media_urls.add(background_url)
-                            download_image(background_url, "./web_images")
+                            download_image(background_url, download_path)
 
             # Pretty-print the remaining HTML content without script tags
 
