@@ -17,7 +17,7 @@ EXCEPTIONS = {"https://pcclegacy.smugmug.com/Website-Images/Contact-us/Contact"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".webp"}
 
 
-def download_image(url, folder, index):
+def download_image(url, folder):
     """Download a single image and save it."""
     try:
         response = requests.get(url, timeout=10, stream=True)
