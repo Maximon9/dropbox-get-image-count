@@ -8,12 +8,49 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup  # Import BeautifulSoup
 import requests
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 base_url = "https://pcclegacy.smugmug.com/"
 
 EXCEPTIONS = {"https://pcclegacy.smugmug.com/Website-Images/Contact-us/Contact"}
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".webp"}
+
+
+def download_image(url, folder, index):
+    """Download a single image and save it."""
+    try:
+        response = requests.get(url, timeout=10, stream=True)
+        response.raise_for_status()  # Raise error for bad responses
+
+        # Extract file extension or default to .jpg
+        ext = os.path.splitext(url)[1].lower()
+        if ext not in {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}:
+            ext = ".jpg"
+
+        # Save image with a unique name
+        filename = f"{index}{ext}"
+        filepath = os.path.join(folder, filename)
+
+        with open(filepath, "wb") as file:
+            for chunk in response.iter_content(1024):
+                file.write(chunk)
+
+        print(f"✅ Downloaded: {filename}")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Failed to download {url}: {e}")
+
+
+def bulk_download_images(
+    image_urls: list[str], folder="downloaded_images", num_threads=5
+):
+    """Download images using multiple threads for speed."""
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        for index, url in enumerate(image_urls):
+            executor.submit(download_image, url, folder, index)
 
 
 def is_exception(url: str) -> bool:
@@ -38,9 +75,9 @@ def url_is_image(url: str):
 
 
 # Set up Selenium to use Chrome
-def get_image_urls(main_url: str):
-    visited_urls = set()
-    media_urls = set()
+def get_image_urls(main_url: str) -> set[str]:
+    visited_urls: set[str] = set()
+    media_urls: set[str] = set()
 
     chrome_service = ChromeService(executable_path=ChromeDriverManager().install())
     chrome_options = Options()
@@ -144,7 +181,8 @@ def get_image_urls(main_url: str):
             # Close the WebDriver
             driver.quit()
 
-    return get_image_urls_rec(main_url)
+    get_image_urls_rec(main_url)
+    return list[media_urls]
 
 
 # print(
@@ -154,4 +192,7 @@ def get_image_urls(main_url: str):
 # )
 
 medias = get_image_urls(base_url)
+
+bulk_download_images(image_urls=medias, folder="./web_images", num_threads=10)
+
 print(len(medias))
