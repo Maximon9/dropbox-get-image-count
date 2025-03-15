@@ -4,4 +4,7 @@ PyQt6==6.8.1
 typing-extensions==4.12.2
 beautifulsoup4==4.13.3
 selenium==4.29.0
-playwright==1.50.0
+# playwright==1.50.0
+# Scrapy==2.12.0
+# requests_html2==2.0.3
+pandas==2.2.3

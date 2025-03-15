@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # from queue import Queue
 
 # Replace with your Dropbox API access token
-ACCESS_TOKEN = "TOKEN"
+# ACCESS_TOKEN = "TOKEN"
 
 # File extensions to consider as images
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
